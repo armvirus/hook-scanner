@@ -24,6 +24,8 @@ namespace scanner
 		std::uintptr_t local_loaded_text_section = module_data->local_loaded_module_buffer + module_data->text_raw;
 		std::uintptr_t local_copied_text_section = module_data->copied_image_address + module_data->text_va;
 
+		ZyanU8 previous_instruction_length{};
+
 		for (ZyanUSize offset = 0; offset < module_data->text_size;)
 		{
 			auto [status, instruction, operands] = scanner->disassembler->disassemble_instruction((void*)(local_copied_text_section + offset), (uint32_t)(module_data->text_size - offset));
@@ -39,14 +41,29 @@ namespace scanner
 					{
 						std::uintptr_t jmp_destination{};
 						jmp_destination = scanner->disassembler->get_instruction_absolute_address(*instruction, operands, runtime_address);
-						if (*reinterpret_cast<std::uint16_t*>(local_copied_text_section + offset) == 0x25FF)
+
+						if (instruction->length == 2)
+						{
+							auto [previous_inst_status, previous_inst_instruction, previous_inst_operands] =
+								scanner->disassembler->disassemble_instruction((void*)(local_copied_text_section + offset - previous_instruction_length), previous_instruction_length);
+
+							if (previous_inst_instruction->mnemonic == ZYDIS_MNEMONIC_MOV)
+							{
+								if (scanner->disassembler->get_instruction_register(*previous_inst_instruction, previous_inst_operands) ==
+									scanner->disassembler->get_instruction_register(*instruction, operands))
+								{
+									jmp_destination = scanner->disassembler->get_instruction_absolute_address(*previous_inst_instruction, previous_inst_operands, ZYDIS_RUNTIME_ADDRESS_NONE);
+								}
+							}
+						}
+						else if (*reinterpret_cast<std::uint16_t*>(local_copied_text_section + offset) == 0x25FF)
 						{
 							jmp_destination = *reinterpret_cast<std::uintptr_t*>(local_copied_text_section + offset + instruction->length);
 						}
 						else
 						{
 							jmp_destination = scanner->disassembler->get_instruction_absolute_address(*instruction, operands, runtime_address);
-						}
+						}			
 
 						std::string jmp_destination_formatted = find_module_name(scanner, jmp_destination);
 
@@ -100,6 +117,7 @@ namespace scanner
 				}
 			}
 
+			previous_instruction_length = instruction->length;
 			offset += instruction->length;
 			runtime_address += instruction->length;
 		}
