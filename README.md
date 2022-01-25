@@ -8,11 +8,11 @@ Scans all modules in target process for jmp/int3 hooks dissassembles then and fo
 4. If the jmp destination leads to an absolute jmp it follows it and prints the result (module + offset)
 5. It can be customized to decent int3 (breakpoint hooks) and other patches like nop
 6. Before logging checks if the function is exported for better and easier logging/analysis
+7. It can be customized to skip modules that you don't want to get scanned [here](https://github.com/armvirus/hook-scanner/blob/21010632c050f89aff219254087d20d8970085ff/hook_scanner/scanner.cpp#L119)
 ## Example Usage
 ![Valorant Example](./example.jpg)
 
-Note: this project was coded in 1 day so it might have some bugs (open ticket)
-It can be customized to skip modules that you don't want to get scanned [here](https://github.com/armvirus/hook-scanner/blob/21010632c050f89aff219254087d20d8970085ff/hook_scanner/scanner.cpp#L119)<br />
+Note: this project was coded in 1 day so it might have some bugs (open ticket)<br />
 
 ## Usage
 
