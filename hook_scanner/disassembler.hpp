@@ -12,6 +12,7 @@ namespace zydis
 		disassembler();
 		std::tuple< ZyanStatus, ZydisDecodedInstruction*, ZydisDecodedOperand*> disassemble_instruction(void* instruction_address, std::uint32_t instruction_length);
 		ZyanU64 get_instruction_absolute_address(ZydisDecodedInstruction& instruction, ZydisDecodedOperand* operands, ZyanU64 runtime_address);
+		ZydisRegister get_instruction_register(ZydisDecodedInstruction& instruction, ZydisDecodedOperand* operands);
 		std::string format_instruction(ZydisDecodedInstruction& instruction, ZydisDecodedOperand* operands, ZyanU64 runtime_address);
 
 	private:
