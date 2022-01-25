@@ -71,11 +71,11 @@ namespace scanner
 							}
 
 							std::string absolute_jmp_destination_formatted = find_module_name(scanner, absolute_jmp_destination);
-							printf("[2] [%p] [%s + %s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), absolute_jmp_destination_formatted.c_str());
+							printf("[2] [%p] [%s!%s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), absolute_jmp_destination_formatted.c_str());
 						}
 						else
 						{
-							printf("[1] [%p] [%s + %s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), jmp_destination_formatted.c_str());
+							printf("[1] [%p] [%s!%s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), jmp_destination_formatted.c_str());
 						}
 
 						hooks_found++;
@@ -85,13 +85,13 @@ namespace scanner
 					case ZYDIS_MNEMONIC_INT3:
 					{
 						std::string instruction_buffer = scanner->disassembler->format_instruction(*instruction, operands, runtime_address);
-						printf("[0] [%p] [%s + %s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
+						printf("[0] [%p] [%s!%s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
 						break;
 					}
 					case ZYDIS_MNEMONIC_NOP:
 					{
 						std::string instruction_buffer = scanner->disassembler->format_instruction(*instruction, operands, runtime_address);
-						printf("[0] [%p] [%s + %s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
+						printf("[0] [%p] [%s!%s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
 						break;
 					}
 					default:
