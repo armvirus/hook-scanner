@@ -26,12 +26,12 @@ namespace scanner
 
 		for (ZyanUSize offset = 0; offset < module_data->text_size;)
 		{
-			auto [status, instruction, operands] = scanner->disassembler->disassemble_instruction((void*)(local_copied_text_section + offset), module_data->text_size - offset);
+			auto [status, instruction, operands] = scanner->disassembler->disassemble_instruction((void*)(local_copied_text_section + offset), (uint32_t)(module_data->text_size - offset));
 			if (ZYAN_SUCCESS(status))
 			{
 				if (memcmp(reinterpret_cast<void*>(local_loaded_text_section + offset), reinterpret_cast<void*>(local_copied_text_section + offset), instruction->length) != 0)
 				{
-					std::string export_name = memory::pe_viewer::find_module_export_by_rva(module_data->copied_image_address, runtime_address - module_data->remote_module_base);
+					std::string export_name = memory::pe_viewer::find_module_export_by_rva(module_data->copied_image_address, (uint32_t)(runtime_address - module_data->remote_module_base));
 
 					switch (instruction->mnemonic)
 					{
@@ -69,11 +69,11 @@ namespace scanner
 							}
 
 							std::string absolute_jmp_destination_formatted = find_module_name(scanner, absolute_jmp_destination);
-							printf("[2] [%p] [%s + %s] [jmp %s]\n", runtime_address, module_data->module_name.c_str(), export_name.c_str(), absolute_jmp_destination_formatted.c_str());
+							printf("[2] [%p] [%s + %s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), absolute_jmp_destination_formatted.c_str());
 						}
 						else
 						{
-							printf("[1] [%p] [%s + %s] [jmp %s]\n", runtime_address, module_data->module_name.c_str(), export_name.c_str(), jmp_destination_formatted.c_str());
+							printf("[1] [%p] [%s + %s] [jmp %s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), jmp_destination_formatted.c_str());
 						}
 
 						hooks_found++;
@@ -83,13 +83,13 @@ namespace scanner
 					case ZYDIS_MNEMONIC_INT3:
 					{
 						std::string instruction_buffer = scanner->disassembler->format_instruction(*instruction, operands, runtime_address);
-						printf("[0] [%p] [%s + %s] [%s]\n", runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
+						printf("[0] [%p] [%s + %s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
 						break;
 					}
 					case ZYDIS_MNEMONIC_NOP:
 					{
 						std::string instruction_buffer = scanner->disassembler->format_instruction(*instruction, operands, runtime_address);
-						printf("[0] [%p] [%s + %s] [%s]\n", runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
+						printf("[0] [%p] [%s + %s] [%s]\n", (void*)runtime_address, module_data->module_name.c_str(), export_name.c_str(), instruction_buffer.c_str());
 						break;
 					}
 					default:
