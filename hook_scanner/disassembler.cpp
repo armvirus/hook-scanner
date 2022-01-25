@@ -22,14 +22,33 @@ ZyanU64 zydis::disassembler::get_instruction_absolute_address(ZydisDecodedInstru
 
 	for (int i = 0; i < instruction.operand_count; i++)
 	{
-		if ((operands[i].type == ZYDIS_OPERAND_TYPE_IMMEDIATE && operands[i].imm.is_relative) || operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
+		if ((operands[i].type == ZYDIS_OPERAND_TYPE_IMMEDIATE && operands[i].imm.is_relative == TRUE) || operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
 		{
 			ZydisCalcAbsoluteAddress(&instruction, &operands[i], runtime_address, &destination);
+			break;
+		}
+
+		if (operands[i].type == ZYDIS_OPERAND_TYPE_IMMEDIATE && operands[i].imm.is_relative == FALSE)
+		{
+			destination = operands[i].imm.value.u;
 			break;
 		}
 	}
 
 	return destination;
+}
+
+ZydisRegister zydis::disassembler::get_instruction_register(ZydisDecodedInstruction& instruction, ZydisDecodedOperand* operands)
+{
+	for (int i = 0; i < instruction.operand_count; i++)
+	{
+		if (operands[i].type == ZYDIS_OPERAND_TYPE_REGISTER)
+		{
+			return operands[i].reg.value;
+		}
+	}
+
+	return ZYDIS_REGISTER_NONE;
 }
 
 std::string zydis::disassembler::format_instruction(ZydisDecodedInstruction& instruction, ZydisDecodedOperand* operands, ZyanU64 runtime_address)
