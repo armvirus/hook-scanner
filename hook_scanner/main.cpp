@@ -20,11 +20,11 @@ int main(int arg_c, char** arg_v)
 	HANDLE process_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id);
 	if (!process_handle || process_handle == INVALID_HANDLE_VALUE)
 	{
-		printf("[-] failed to open handle to process [%s]\n", process_id);
+		printf("[-] failed to open handle to process [%d]\n", process_id);
 		return -1;
 	}
 
-	printf("[+] opened handle to process [0x%x]\n", process_handle);
+	printf("[+] opened handle to process [0x%p]\n", process_handle);
 
 	zydis::disassembler disassembler{};
 
