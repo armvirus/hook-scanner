@@ -9,8 +9,8 @@ zydis::disassembler::disassembler()
 
 std::tuple< ZyanStatus, ZydisDecodedInstruction*, ZydisDecodedOperand*> zydis::disassembler::disassemble_instruction(void* instruction_address, std::uint32_t instruction_length)
 {
-	ZydisDecodedInstruction instruction;
-	ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
+	static ZydisDecodedInstruction instruction;
+	static ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
 	ZyanStatus status = ZydisDecoderDecodeFull(&this->decoder, instruction_address, instruction_length, &instruction, operands, ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY);
 
 	return { status, &instruction, operands };
