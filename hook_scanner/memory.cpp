@@ -46,7 +46,7 @@ namespace memory
 		MODULEENTRY32 module_info;
 		module_info.dwSize = sizeof(module_info);
 
-		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, process_id);
+		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, process_id);
 
 		Module32First(snapshot, &module_info);
 		auto [dos, success_dos] = memory::read_remote_memory<IMAGE_DOS_HEADER>(process_handle, reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr));
@@ -54,12 +54,18 @@ namespace memory
 
 		process_modules.push_back(std::tuple<std::uintptr_t, std::uint32_t, std::string, std::string>(reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr), nt.OptionalHeader.SizeOfImage, module_info.szExePath, module_info.szModule));
 
+		std::uintptr_t main_module = reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr);
+
 		while (Module32Next(snapshot, &module_info))
 		{
-			auto [dos, success_dos] = memory::read_remote_memory<IMAGE_DOS_HEADER>(process_handle, reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr));
-			auto [nt, success_nt] = memory::read_remote_memory<IMAGE_NT_HEADERS>(process_handle, reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr) + dos.e_lfanew);
+			// When querying both 32 and 64bit modules, the main exe will be included twice
+			if (reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr) != main_module)
+			{
+				auto [dos, success_dos] = memory::read_remote_memory<IMAGE_DOS_HEADER>(process_handle, reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr));
+				auto [nt, success_nt] = memory::read_remote_memory<IMAGE_NT_HEADERS>(process_handle, reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr) + dos.e_lfanew);
 
-			process_modules.push_back(std::tuple<std::uintptr_t, std::uint32_t, std::string, std::string>(reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr), nt.OptionalHeader.SizeOfImage, module_info.szExePath, module_info.szModule));
+				process_modules.push_back(std::tuple<std::uintptr_t, std::uint32_t, std::string, std::string>(reinterpret_cast<std::uintptr_t>(module_info.modBaseAddr), nt.OptionalHeader.SizeOfImage, module_info.szExePath, module_info.szModule));
+			}
 		}
 
 		return process_modules;
@@ -97,13 +103,23 @@ namespace memory
 			if (module_dos_header->e_magic != IMAGE_DOS_SIGNATURE)
 				return{};
 
-			const auto module_nt_headers = reinterpret_cast<PIMAGE_NT_HEADERS>(module_base + module_dos_header->e_lfanew);
-
-			if (module_nt_headers->Signature != IMAGE_NT_SIGNATURE)
+			const auto module_nt_headers32 = reinterpret_cast<PIMAGE_NT_HEADERS32>(module_base + module_dos_header->e_lfanew);
+			if (module_nt_headers32->Signature != IMAGE_NT_SIGNATURE)
 				return{};
 
-			const auto section_count = module_nt_headers->FileHeader.NumberOfSections;
-			const auto section_headers = IMAGE_FIRST_SECTION(module_nt_headers);
+			WORD section_count;
+			PIMAGE_SECTION_HEADER section_headers;
+			if (module_nt_headers32->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64)
+			{
+				const auto module_nt_headers64 = reinterpret_cast<PIMAGE_NT_HEADERS64>(module_base + module_dos_header->e_lfanew);
+				section_count = module_nt_headers64->FileHeader.NumberOfSections;
+				section_headers = IMAGE_FIRST_SECTION(module_nt_headers64);
+			}
+			else
+			{
+				section_count = module_nt_headers32->FileHeader.NumberOfSections;
+				section_headers = IMAGE_FIRST_SECTION(module_nt_headers32);
+			}
 
 			for (WORD i = 0; i < section_count; ++i)
 			{
@@ -121,10 +137,19 @@ namespace memory
 			PIMAGE_DOS_HEADER dos_headers = reinterpret_cast<PIMAGE_DOS_HEADER>(image_base);
 			if (dos_headers->e_magic != IMAGE_DOS_SIGNATURE) return {};
 
-			PIMAGE_NT_HEADERS64 nt_headers = reinterpret_cast<PIMAGE_NT_HEADERS64>(image_base + dos_headers->e_lfanew);
-			if (nt_headers->Signature != IMAGE_NT_SIGNATURE) return {};
+			PIMAGE_NT_HEADERS32 nt_headers32 = reinterpret_cast<PIMAGE_NT_HEADERS32>(image_base + dos_headers->e_lfanew);
+			if (nt_headers32->Signature != IMAGE_NT_SIGNATURE) return {};
+			std::uint32_t exports_rva;
+			if (nt_headers32->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64)
+			{
+				PIMAGE_NT_HEADERS64 nt_headers64 = reinterpret_cast<PIMAGE_NT_HEADERS64>(image_base + dos_headers->e_lfanew);
+				exports_rva = nt_headers64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+			}
+			else
+			{
+				exports_rva = nt_headers32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+			}
 
-			std::uint32_t exports_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
 			if (!exports_rva) return {};
 
 			PIMAGE_EXPORT_DIRECTORY exports = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(image_base + exports_rva);
