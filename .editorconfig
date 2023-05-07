@@ -1,0 +1,8 @@
+root=true
+
+[*]
+end_of_line = crlf
+
+[*.{cpp,hpp}]
+indent_style=tab
+indent_size=4
